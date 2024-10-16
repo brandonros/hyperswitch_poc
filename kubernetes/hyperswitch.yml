@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    name: hyperswitch
+  name: hyperswitch
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: hyperswitch
+  namespace: argocd
+spec:
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+  destinations:
+    - namespace: hyperswitch
+      server: https://kubernetes.default.svc
+  orphanedResources:
+    warn: false
+  sourceRepos:
+    - '*'
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: hyperswitch
+  namespace: argocd
+spec:
+  destination:
+    namespace: hyperswitch
+    server: https://kubernetes.default.svc
+  project: hyperswitch
+  source:
+    path: ./charts/incubator/hyperswitch-stack/
+    repoURL: https://github.com/juspay/hyperswitch-helm.git
+    targetRevision: v0.1.3

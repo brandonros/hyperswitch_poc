@@ -1,0 +1,69 @@
+- name: install argocd cli
+  hosts: my_instance
+  gather_facts: false
+  become: true
+  become_user: root
+  tasks:
+    - name: Check if installed
+      ansible.builtin.command:
+        cmd: "which argocd"
+      register: argocd_check
+      ignore_errors: yes
+
+    - name: Download and install if not installed
+      ansible.builtin.shell: |
+        wget https://github.com/argoproj/argo-cd/releases/download/v2.12.2/argocd-linux-amd64
+        chmod +x argocd-linux-amd64
+        mv argocd-linux-amd64 /usr/local/bin/argocd
+      when: argocd_check.rc != 0
+
+- name: deploy argocd server
+  hosts: my_instance
+  gather_facts: false
+  become: true
+  become_user: debian
+  vars:
+    argocd_admin_password: "{{ lookup('env', 'ARGOCD_ADMIN_PASSWORD') }}"
+    argocd_admin_password_mtime: "{{ lookup('env', 'ARGOCD_ADMIN_PASSWORD_MTIME') }}"
+  environment:
+    KUBECONFIG: "/home/debian/.kube/config"
+  tasks:
+    - name: Check if argocd-server deployment exists
+      ansible.builtin.shell: |
+        kubectl get deployment -n argocd argocd-server --ignore-not-found
+      register: argocd_deployment_check
+      failed_when: argocd_deployment_check.rc not in [0, 1]
+
+    - name: create namespace
+      when: "'argocd-server' not in argocd_deployment_check.stdout"
+      ansible.builtin.shell: |
+        kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
+
+    - name: rollout
+      when: "'argocd-server' not in argocd_deployment_check.stdout"
+      timeout: 300      
+      ansible.builtin.shell: |
+        kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/v2.12.2/manifests/install.yaml
+        kubectl wait deployment -n argocd argocd-server --for condition=Available=True --timeout=300s
+
+    - name: patch
+      when: "'argocd-server' not in argocd_deployment_check.stdout"
+      ansible.builtin.shell: |
+        kubectl patch configmap argocd-cmd-params-cm --namespace argocd --type merge -p '{"data":{"server.insecure":"true"}}'
+        kubectl patch deployment argocd-repo-server -n argocd --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/env/-", "value": {"name": "ARGOCD_EXEC_TIMEOUT", "value": "10m"}}]'
+        kubectl -n argocd patch secret argocd-secret \
+          -p '{
+          "stringData": {
+            "admin.password": "{{ argocd_admin_password }}",
+            "admin.passwordMtime": "{{ argocd_admin_password_mtime }}"
+          }
+        }'
+        kubectl rollout restart deployment argocd-server -n argocd
+        kubectl rollout restart deployment argocd-repo-server -n argocd
+
+    - name: wait for patch
+      when: "'argocd-server' not in argocd_deployment_check.stdout"
+      timeout: 300      
+      ansible.builtin.shell: |
+        kubectl wait deployment -n argocd argocd-server --for condition=Available=True --timeout=300s
+

@@ -1,0 +1,31 @@
+- name: deploy hyperswitch
+  hosts: my_instance
+  gather_facts: false
+  become: true
+  become_user: debian
+  environment:
+    KUBECONFIG: "/home/debian/.kube/config"
+  tasks:
+    # TODO: check if we need to deploy
+
+    # TODO: wait for argocd-server to be healthy
+
+    - name: login to argocd cli
+      ansible.builtin.shell: |
+        CLUSTER_IP=$(kubectl get service -n argocd argocd-server -o jsonpath='{.spec.clusterIP}')
+        argocd login --insecure --username admin --password admin --plaintext $CLUSTER_IP
+
+    - name: read yaml file content
+      ansible.builtin.set_fact:
+        yaml_content: "{{ lookup('file', playbook_dir + '/../kubernetes/hyperswitch.yml') }}"
+
+    - name: apply yaml
+      ansible.builtin.shell: |
+        echo '{{ yaml_content }}' | kubectl apply -f -
+
+    - name: sync + wait for app
+      timeout: 600
+      ansible.builtin.shell: |
+        argocd app sync hyperswitch
+
+    # TODO: create ingress
