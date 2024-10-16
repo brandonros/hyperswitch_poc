@@ -1,3 +1,18 @@
+- name: label node after k3s installation
+  hosts: my_instance
+  gather_facts: false
+  become: true
+  become_user: debian
+  environment:
+    KUBECONFIG: "/home/debian/.kube/config"
+  tasks:
+    - name: Get node name
+      command: "kubectl get nodes -o jsonpath='{.items[0].metadata.name}'"
+      register: node_name
+
+    - name: Label the node with node-type=generic-compute
+      command: "kubectl label node {{ node_name.stdout }} node-type=generic-compute"
+
 - name: deploy hyperswitch
   hosts: my_instance
   gather_facts: false
@@ -20,12 +35,26 @@
         yaml_content: "{{ lookup('file', playbook_dir + '/../kubernetes/hyperswitch.yml') }}"
 
     - name: apply yaml
-      ansible.builtin.shell: |
-        echo '{{ yaml_content }}' | kubectl apply -f -
+      ansible.builtin.command: kubectl apply -f -
+      args:
+        stdin: "{{ yaml_content }}"
 
     - name: sync + wait for app
       timeout: 600
       ansible.builtin.shell: |
         argocd app sync hyperswitch
-
-    # TODO: create ingress
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: hyperswitch-ingressroute
+  namespace: hyperswitch
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: PathPrefix(`/hyperswitch-sdk-demo`)
+      kind: Rule
+      services:
+        - name: hyperswitch-sdk-demo
+          port: 80

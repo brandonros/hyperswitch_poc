@@ -9,7 +9,7 @@ terraform {
 
 provider "google" {
   credentials = file("~/gcp/service-account-key.json")
-  project = "kubevirt-poc"
+  project = "hyperswitch-poc"
   region  = "us-east1" # Set your desired region
 }
 
@@ -43,7 +43,7 @@ resource "google_compute_instance" "my_instance" {
 }
 
 output "instance_username" {
-  value = "109486927228315081685" # from gcloud compute os-login describe-profile --project=kubevirt-poc
+  value = "109486927228315081685" # from gcloud compute os-login describe-profile --project=hyperswitch-poc
 }
 
 output "instance_ipv4" {

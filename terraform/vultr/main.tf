@@ -21,6 +21,7 @@ resource "vultr_instance" "my_instance" {
     region = "atl"
     os_id = 2136 # bookworm
     hostname = "instance1"
+    ssh_key_ids = [resource.vultr_ssh_key.my_ssh_key.id]
     user_data = <<EOF
 #cloud-config
 users:
