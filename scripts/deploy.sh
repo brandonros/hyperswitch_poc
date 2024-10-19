@@ -5,7 +5,8 @@ set -e
 # TODO: better way to manage this
 #CLOUD_PROVIDER="google_cloud"
 #CLOUD_PROVIDER="vultr"
-CLOUD_PROVIDER="azure"
+#CLOUD_PROVIDER="azure"
+CLOUD_PROVIDER="digitalocean"
 
 # check for ssh key
 if [ ! -e "$HOME/.ssh/id_ed25519.pub" ]
@@ -34,6 +35,13 @@ then
   if [ -z "${ARM_SUBSCRIPTION_ID}" ]
   then
     echo "ARM_SUBSCRIPTION_ID is not set"
+    exit 1
+  fi
+elif [ "$CLOUD_PROVIDER" == "digitalocean" ]
+then
+  if [ -z "${DIGITALOCEAN_TOKEN}" ]
+  then
+    echo "DIGITALOCEAN_TOKEN is not set"
     exit 1
   fi
 fi
