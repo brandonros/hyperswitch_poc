@@ -6,7 +6,8 @@ set -e
 #CLOUD_PROVIDER="google_cloud"
 #CLOUD_PROVIDER="vultr"
 #CLOUD_PROVIDER="azure"
-CLOUD_PROVIDER="digitalocean"
+#CLOUD_PROVIDER="digitalocean"
+CLOUD_PROVIDER="aws"
 
 # Destroy the resources
 cd terraform/$CLOUD_PROVIDER/

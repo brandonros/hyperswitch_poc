@@ -6,7 +6,8 @@ set -e
 #CLOUD_PROVIDER="google_cloud"
 #CLOUD_PROVIDER="vultr"
 #CLOUD_PROVIDER="azure"
-CLOUD_PROVIDER="digitalocean"
+#CLOUD_PROVIDER="digitalocean"
+CLOUD_PROVIDER="aws"
 
 # check for ssh key
 if [ ! -e "$HOME/.ssh/id_ed25519.pub" ]
@@ -42,6 +43,18 @@ then
   if [ -z "${DIGITALOCEAN_TOKEN}" ]
   then
     echo "DIGITALOCEAN_TOKEN is not set"
+    exit 1
+  fi
+elif [ "$CLOUD_PROVIDER" == "aws" ]
+then
+  if [ -z "${AWS_ACCESS_KEY_ID}" ]
+  then
+    echo "AWS_ACCESS_KEY_ID is not set"
+    exit 1
+  fi
+  if [ -z "${AWS_SECRET_ACCESS_KEY}" ]
+  then
+    echo "AWS_SECRET_ACCESS_KEY is not set"
     exit 1
   fi
 fi
